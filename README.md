@@ -268,6 +268,187 @@ At this stage, the data ingestion layer has achieved the following:
 
 
 # Stage2 - Cleaning
+# Cleaning & Standardization Layer
+
+## Overview
+
+The Cleaning & Standardization layer transforms raw NYC Taxi trip data into a clean, consistent, and analysis-ready dataset. This step is critical for ensuring data quality before downstream processing such as feature engineering, aggregation, and demand forecasting.
+
+The pipeline is implemented using PySpark and designed to scale to large datasets.
+
+---
+
+## Responsibilities
+
+This layer performs the following core tasks:
+
+* Standardizes timestamp fields
+* Constructs trip duration
+* Removes invalid and inconsistent records
+* Ensures consistent data types
+* Validates location IDs using lookup tables
+* Removes duplicate records
+* Generates a data quality report
+
+---
+
+## Input
+
+* Raw trip data:
+  `data/raw/` (Parquet files)
+
+* Taxi zone lookup table:
+  `data/lookup/taxi_zone_lookup.csv`
+
+---
+
+## Output
+
+* Cleaned dataset (Parquet):
+  `data/processed/cleaned_trips/`
+
+* Cleaning report:
+  `data/processed/cleaning/cleaning_report.txt`
+
+---
+
+## Data Cleaning Steps
+
+### 1. Timestamp Standardization
+
+* Convert pickup and dropoff columns to timestamp
+* Create derived feature:
+
+```
+trip_duration_min = (dropoff - pickup) / 60
+```
+
+---
+
+### 2. Remove Invalid Records
+
+The following records are filtered out:
+
+* Missing pickup or dropoff timestamps
+* Missing location IDs
+* Invalid time values
+* Trip duration ≤ 0
+* Trip distance < 0
+* Fare or total amount < 0
+
+---
+
+### 3. Data Type Standardization
+
+Ensures consistency across columns:
+
+* Location IDs → Integer
+* Passenger count → Integer
+* Fare and amount fields → Double
+* Timestamp fields → Timestamp
+
+---
+
+### 4. Location ID Validation
+
+* Joins with taxi zone lookup table
+* Removes records with invalid or unknown location IDs
+
+---
+
+### 5. Deduplication
+
+* Removes duplicate trip records
+
+---
+
+## Cleaning Report
+
+A report is generated to summarize the cleaning process.
+
+Example:
+
+```
+===== Cleaning Report =====
+Cleaning pipeline completed.
+- Standardized timestamp fields
+- Removed null pickup/dropoff/location rows
+- Removed invalid time records
+- Removed invalid numeric records
+- Validated location IDs with zone lookup
+- Removed duplicate rows
+```
+
+---
+
+## Running the Pipeline
+
+### Local Execution
+
+```
+python src/cleaning/clean_trips.py
+```
+
+---
+
+### Output Paths
+
+Configured in:
+
+```
+config/config.py
+```
+
+Key variables:
+
+* `CLEANED_TRIPS_PATH`
+* `CLEANING_REPORT_PATH`
+
+---
+
+## Debug Mode
+
+To handle local memory limitations, sampling can be enabled:
+
+```
+DEBUG = True
+
+if DEBUG:
+    df = df.sample(0.01)
+```
+
+⚠️ Note:
+
+* Debug mode is for local testing only
+* Full dataset should be processed in distributed environments (e.g., NYU JupyterHub)
+
+---
+
+## Design Principles
+
+* Layered pipeline architecture:
+
+  ```
+  Ingestion → Cleaning → Feature Engineering → Analytics
+  ```
+
+* Each layer reads from processed data of the previous layer
+
+* Avoids repeated raw data processing
+
+* Supports scalability and modular team collaboration
+
+---
+
+## Why This Layer Matters
+
+Poor data quality leads to:
+
+* Incorrect hotspot detection
+* Inaccurate trip duration statistics
+* Biased demand forecasting models
+
+This layer ensures that all downstream analytics operate on reliable, standardized data.
 
 
 
